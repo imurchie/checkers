@@ -88,6 +88,14 @@ module Checkers
       @col = col
     end
 
+    def make_king
+      @directions = [:+, :-]
+    end
+
+    def king?
+      directions.length == 2
+    end
+
     def to_s
       "Piece: #{color} @ (#{row}, #{col})"
     end

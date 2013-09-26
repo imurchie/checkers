@@ -9,10 +9,6 @@ module Checkers
 
       @start_pos, @end_pos = start_pos, end_pos
     end
-
-    # def to_s
-    #   "#{self.class}: Cannot move from #{@start_pos} to #{@end_pos.inspect}"
-    # end
   end
 
 
@@ -40,7 +36,7 @@ module Checkers
       elsif valid_jump_move?(start_pos, *(end_pos.dup))
         move!(start_pos, *end_pos)
       else
-        raise InvalidMoveError.new(start_pos, end_pos)
+        raise InvalidMoveError.new(start_pos, end_pos, "Unable to make the move.")
       end
     end
 
@@ -68,6 +64,9 @@ module Checkers
           current_pos = pos
         end
       end
+
+      # promote if it has reached the end
+      piece.make_king if piece.row == 0 || piece.row == 7
 
       true
     end
@@ -107,6 +106,29 @@ module Checkers
       new_board.grid = new_grid
 
       new_board
+    end
+
+    def output
+      output = []
+
+      @grid.each do |row|
+        new_row = []
+        row.each do |piece|
+          if piece.nil?
+            new_row << nil
+          elsif piece.king?
+            new_row << (piece.color == :red ? :red_king : :white_king)
+          else
+            new_row << piece.color
+          end
+        end
+
+        output << new_row
+      end
+
+      # this is now an array that represents the data
+      # but does not expose any of the internals
+      output
     end
 
 

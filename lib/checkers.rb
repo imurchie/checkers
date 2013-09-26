@@ -1,7 +1,10 @@
 require_relative "./board"
+require_relative "./constants"
 
 module Checkers
   class Game
+    include Checkers::Constants
+
     INPUT_MAP = {
       "1" => 0, "2" => 1, "3" => 2, "4" => 3,
       "5" => 4, "6" => 5, "7" => 6, "8" => 7,
@@ -44,8 +47,29 @@ module Checkers
     end
 
     def print_board(board)
-      # for now...
-      board.pb
+      puts "  a b c d e f g h"
+      board.output.each_with_index do |row, index|
+        print "#{index + 1} "
+        row.each do |pos|
+          print case pos
+          when nil
+            "_ "
+          when :red
+            "#{RED_PAWN} "
+          when :red_king
+            "#{RED_KING} "
+          when :white
+            "#{WHITE_PAWN} "
+          when :white_king
+            "#{WHITE_KING} "
+          else
+            raise "Board returned invalid output."
+          end
+        end
+        puts
+      end
+
+      nil
     end
   end
 end
