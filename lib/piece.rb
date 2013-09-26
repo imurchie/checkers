@@ -12,6 +12,14 @@ module Checkers
       @direction = ((@row < Board::GRID_SIZE / 2) ? :+ : :-)
     end
 
+    def available_moves
+      moves = jump_moves
+
+      moves += slide_moves if moves.empty?
+
+      moves
+    end
+
     def slide_moves
       next_row = row.send(direction, 1)
 
@@ -23,30 +31,47 @@ module Checkers
       moves
     end
 
-    def jump_moves(row = self.row, col = self.col)
-      # base case: all movements are to empty spaces or occupied by us
-      return [] if move_offsets(row, col).all? do |offset|
-        neighbor = board[row.send(direction, 1), col + offset]
-        neighbor.nil? || neighbor.color == color
-      end
-
+    def jump_moves
       moves = []
+
       move_offsets(row, col).each do |offset|
         neighbor = board[row.send(direction, 1), col + offset]
         next if neighbor.nil? || neighbor.color == color
 
-        # the neighbor is an opponent!
         row_n = neighbor.row.send(direction, 1)
         col_n = neighbor.col + offset
         if board[row_n, col_n].nil?
-          # the further side of the neighbor is empty
           moves << [row_n, col_n]
-          moves += jump_moves(row_n, col_n)
         end
       end
 
       moves
     end
+
+    # def jump_moves(row = self.row, col = self.col)
+    #   # base case: all movements are to empty spaces or occupied by us
+    #   return [] if move_offsets(row, col).all? do |offset|
+    #     neighbor = board[row.send(direction, 1), col + offset]
+    #     neighbor.nil? || neighbor.color == color
+    #   end
+
+    #   moves = []
+    #   move_offsets(row, col).each do |offset|
+    #     neighbor = board[row.send(direction, 1), col + offset]
+    #     next if neighbor.nil? || neighbor.color == color
+
+    #     # the neighbor is an opponent!
+    #     row_n = neighbor.row.send(direction, 1)
+    #     col_n = neighbor.col + offset
+    #     if board[row_n, col_n].nil?
+    #       # the further side of the neighbor is empty
+    #       moves << [row_n, col_n]
+    #       moves += jump_moves(row_n, col_n)
+    #     end
+    #   end
+
+    #   moves
+    # end
 
     def set_position(row, col)
       @row = row
