@@ -32,13 +32,20 @@ module Checkers
         # alternate each turn
         current = (current == 0 ? 1 : 0)
       end
+
+      if board.lost?(:red)
+        puts "White wins!"
+      else
+        puts "Red wins!"
+      end
     end
 
 
     private
 
     def get_move(color)
-      puts "#{color.to_s.capitalize}: Enter a move (e.g., f3 h5 [f7...]): "
+      print "#{color.to_s.capitalize} (#{color == :red ? RED_PAWN : WHITE_PAWN}):"
+      puts " Enter a move (e.g., f3 h5 [f7...]): "
       input = gets.chomp.split(" ")
 
       input.map do |str|

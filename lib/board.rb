@@ -86,8 +86,7 @@ module Checkers
     end
 
     def game_over?
-      # loop through and see if all of one or the other color is no longer present
-      false
+      lost?(:red) || lost?(:white)
     end
 
     def dup
@@ -132,25 +131,33 @@ module Checkers
     end
 
 
-    # for debugging in pry only
-    def pb
-      puts "  a b c d e f g h"
-      @grid.each_with_index do |row, index|
-        print "#{index + 1} "
-        row.each do |col|
-          print (col.nil? ? "_ " : (col.color == :red ? "r " : "w "))
-        end
-        puts
-      end
-
-      nil
-    end
-
-
     protected
 
     def grid=(new_grid)
       @grid = new_grid
+    end
+
+    # expects an end_pos Array that can be destroyed
+    def valid_jump_move?(start_pos, *end_pos)
+      board = self.dup
+      piece = board[*start_pos]
+
+      if end_pos.empty?
+        return piece.jump_moves.empty?
+      end
+
+      # get the next jump position
+      # and see if it is in the jump positions for the piece
+      pos = end_pos.shift
+      if piece.jump_moves.include?(pos)
+        board.move!([piece.row, piece.col], pos)
+
+        # try the rest of the moves
+        return board.valid_jump_move?(pos, *end_pos)
+      else
+        # we cannot do that move, so send false up the stack
+        return false
+      end
     end
 
 
@@ -196,27 +203,6 @@ module Checkers
       piece.slide_moves.include?(end_pos[0])
     end
 
-    # expects an end_pos Array that can be destroyed
-    def valid_jump_move?(start_pos, *end_pos)
-      return true if end_pos.empty?
-
-      board = self.dup
-      piece = board[*start_pos]
-
-      # get the next jump position
-      # and see if it is in the jump positions for the piece
-      pos = end_pos.shift
-      if piece.jump_moves.include?(pos)
-        board.move!([piece.row, piece.col], pos)
-
-        # try the rest of the moves
-        return valid_jump_move?(pos, *end_pos)
-      else
-        # we cannot do that move, so send false up the stack
-        return false
-      end
-    end
-
     def all_jump_moves(color)
       moves = []
       @grid.each do |row|
@@ -234,6 +220,15 @@ module Checkers
       new_col = start_pos[1] + ((start_pos[1] - end_pos[1] == 2) ? -1 : 1)
 
       [new_row, new_col]
+    end
+
+    def lost?(color)
+      # loop through and see if all of one or the other color cannot move
+      !@grid.any? do |row|
+        row.any? do |piece|
+          piece && piece.color == color && piece.available_moves.empty?
+        end
+      end
     end
   end
 end
