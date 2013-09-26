@@ -2,18 +2,13 @@ module Checkers
   class Piece
     attr_reader :color, :row, :col
 
-    def initialize(color, board, position, direction = nil)
+    def initialize(color, board, position, directions)
       @color, @board = color, board
 
       @row = position[0]
       @col = position[1]
 
-      # initial direction is based on starting position
-      if direction
-        @direction = direction
-      else
-        @direction = ((@row < Board::GRID_SIZE / 2) ? :+ : :-)
-      end
+      @directions = directions
 
     end
 
@@ -26,11 +21,16 @@ module Checkers
     end
 
     def slide_moves
-      next_row = row.send(direction, 1)
-
       moves = []
-      move_offsets(row, col).each do |offset|
-        moves << [next_row, col + offset] if board[next_row, col + offset].nil?
+
+      directions.each do |dir|
+        next_row = row.send(dir, 1)
+
+        move_offsets(row, col).each do |offset|
+          if board.on_board?(next_row, col + offset) && board[next_row, col + offset].nil?
+            moves << [next_row, col + offset]
+          end
+        end
       end
 
       moves
@@ -39,14 +39,19 @@ module Checkers
     def jump_moves
       moves = []
 
-      move_offsets(row, col).each do |offset|
-        neighbor = board[row.send(direction, 1), col + offset]
-        next if neighbor.nil? || neighbor.color == color
+      directions.each do |dir|
+        move_offsets(row, col).each do |offset|
+          next_row = row.send(dir, 1)
+          next unless board.on_board?(next_row, col + offset)
 
-        row_n = neighbor.row.send(direction, 1)
-        col_n = neighbor.col + offset
-        if board.on_board?(row_n, col_n) && board[row_n, col_n].nil?
-          moves << [row_n, col_n]
+          neighbor = board[next_row, col + offset]
+          next if neighbor.nil? || neighbor.color == color
+
+          row_n = neighbor.row.send(dir, 1)
+          col_n = neighbor.col + offset
+          if board.on_board?(row_n, col_n) && board[row_n, col_n].nil?
+            moves << [row_n, col_n]
+          end
         end
       end
 
@@ -92,18 +97,23 @@ module Checkers
     end
 
     def dup(new_board)
-      Piece.new(color, new_board, [row, col], direction)
+      Piece.new(color, new_board, [row, col], directions)
     end
 
 
     private
 
-    attr_reader :board, :direction
+    attr_reader :board, :directions
 
     def move_offsets(row, col)
-      [-1, 1].select do |offset|
-        board.on_board?(row.send(direction, 1), col + offset)
+      offsets = []
+      directions.each do |dir|
+        offsets += [-1, 1].select do |offset|
+          board.on_board?(row.send(dir, 1), col + offset)
+        end
       end
+
+      offsets
     end
   end
 end

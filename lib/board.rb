@@ -141,7 +141,7 @@ module Checkers
       (0...3).each do |row|
         (0...GRID_SIZE).each do |col|
           if (row.even? && col.odd?) || (row.odd? && col.even?)
-            grid[row][col] = Piece.new(:red, self, [row, col])
+            grid[row][col] = Piece.new(:red, self, [row, col], [:+])
           end
         end
       end
@@ -149,7 +149,7 @@ module Checkers
       (0...3).each do |row|
         (0...GRID_SIZE).each do |col|
           if ((7 - row).even? && col.odd?) || ((7 - row).odd? && col.even?)
-            grid[7 - row][col] = Piece.new(:white, self, [7 - row, col])
+            grid[7 - row][col] = Piece.new(:white, self, [7 - row, col], [:-])
           end
         end
       end
@@ -169,11 +169,6 @@ module Checkers
     def valid_slide_move?(start_pos, *end_pos)
       piece = self[*start_pos]
 
-puts "valid_slide_move?(#{start_pos.inspect}, #{end_pos.inspect})"
-puts "    jump moves: #{all_jump_moves(piece.color)}"
-puts "    end positions: #{end_pos.inspect}"
-puts "    slide moves: #{piece.slide_moves}"
-
       all_jump_moves(piece.color).empty? &&
       end_pos.length == 1 &&
       piece.slide_moves.include?(end_pos[0])
@@ -183,16 +178,12 @@ puts "    slide moves: #{piece.slide_moves}"
     def valid_jump_move?(start_pos, *end_pos)
       return true if end_pos.empty?
 
-puts "valid_jump_move?(#{start_pos.inspect}, #{end_pos.inspect})"
-
       board = self.dup
       piece = board[*start_pos]
 
       # get the next jump position
       # and see if it is in the jump positions for the piece
       pos = end_pos.shift
-puts "    end position: #{pos.inspect}"
-puts "    jump moves: #{piece.jump_moves.inspect}"
       if piece.jump_moves.include?(pos)
         board.move!([piece.row, piece.col], pos)
 
