@@ -10,9 +10,9 @@ module Checkers
       @start_pos, @end_pos = start_pos, end_pos
     end
 
-    def to_s
-      "Cannot move from #{@start_pos} to #{@end_pos.inspect}"
-    end
+    # def to_s
+    #   "#{self.class}: Cannot move from #{@start_pos} to #{@end_pos.inspect}"
+    # end
   end
 
 
@@ -25,29 +25,47 @@ module Checkers
       self
     end
 
-    def move(start_pos, *end_pos)
-      if end_pos.length == 1 && valid_slide_move?(start_pos, end_pos[0])
-        # sliding move
+    def move(start_pos, *end_pos, color)
+      piece = self[*start_pos]
+
+      if piece.nil?
+        raise InvalidMoveError.new(start_pos, end_pos, "No piece.")
+      elsif piece.color != color
+        raise InvalidMoveError.new(start_pos, end_pos, "Not correct color.")
+      end
+
+
+      if valid_slide_move?(start_pos, *end_pos)
         move!(start_pos, *end_pos)
-      elsif end_pos.length > 1 && valid_jump_move?(start_pos, *end_pos)
-        # jumping move
+      elsif valid_jump_move?(start_pos, *(end_pos.dup))
         move!(start_pos, *end_pos)
       else
-        raise InvalidMoveError(start_pos, end_pos)
+        raise InvalidMoveError.new(start_pos, end_pos)
       end
     end
 
     def move!(start_pos, *end_pos)
-      start_piece = self[*start_pos]
+      piece = self[*start_pos]
 
-      self[*start_pos] = nil
-
-      if end_pos.length == 1
-        self[*end_pos[0]] = start_piece
-        start_piece.set_position(*end_pos[0])
+      if slide_move?(start_pos, *end_pos)
+        self[*start_pos] = nil
+        self[*end_pos[0]] = piece
+        piece.set_position(*end_pos[0])
       else
+        current_pos = start_pos
         end_pos.each do |pos|
-          # something
+          self[*current_pos] = nil
+
+          # get rid of jumped-over piece
+          mid_pos = calculate_mid_position(current_pos, pos)
+
+          self[*mid_pos] = nil
+
+          self[*pos] = piece
+          piece.set_position(*pos)
+
+          # get set for next iteration
+          current_pos = pos
         end
       end
 
@@ -73,7 +91,23 @@ module Checkers
       false
     end
 
+    def dup
+      new_board = Board.new
 
+      new_grid = []
+      @grid.each do |row|
+        new_row = []
+        row.each do |piece|
+          new_row << (piece.nil? ? piece : piece.dup(new_board))
+        end
+
+        new_grid << new_row
+      end
+
+      new_board.grid = new_grid
+
+      new_board
+    end
 
 
     # for debugging in pry only
@@ -88,6 +122,13 @@ module Checkers
       end
 
       nil
+    end
+
+
+    protected
+
+    def grid=(new_grid)
+      @grid = new_grid
     end
 
 
@@ -116,14 +157,70 @@ module Checkers
       grid
     end
 
-    def valid_slide_move?(start_pos, end_pos)
+    def slide_move?(start_pos, *end_pos)
       piece = self[*start_pos]
-      piece.slide_moves.include?(end_pos)
+
+      # a slide move only moves a single square
+      (piece.row - end_pos[0][0]).abs == 1
     end
 
-    def valid_jump_move?(start_pos, *end_pos)
+    # a slide move is valid only if there are no jump moves on the board
+    # and the particular slide is to an empty place
+    def valid_slide_move?(start_pos, *end_pos)
       piece = self[*start_pos]
-      end_pos.all? { |pos| piece.jump_moves.include?(pos) }
+
+puts "valid_slide_move?(#{start_pos.inspect}, #{end_pos.inspect})"
+puts "    jump moves: #{all_jump_moves(piece.color)}"
+puts "    end positions: #{end_pos.inspect}"
+puts "    slide moves: #{piece.slide_moves}"
+
+      all_jump_moves(piece.color).empty? &&
+      end_pos.length == 1 &&
+      piece.slide_moves.include?(end_pos[0])
+    end
+
+    # expects an end_pos Array that can be destroyed
+    def valid_jump_move?(start_pos, *end_pos)
+      return true if end_pos.empty?
+
+puts "valid_jump_move?(#{start_pos.inspect}, #{end_pos.inspect})"
+
+      board = self.dup
+      piece = board[*start_pos]
+
+      # get the next jump position
+      # and see if it is in the jump positions for the piece
+      pos = end_pos.shift
+puts "    end position: #{pos.inspect}"
+puts "    jump moves: #{piece.jump_moves.inspect}"
+      if piece.jump_moves.include?(pos)
+        board.move!([piece.row, piece.col], pos)
+
+        # try the rest of the moves
+        return valid_jump_move?(pos, *end_pos)
+      else
+        # we cannot do that move, so send false up the stack
+        return false
+      end
+    end
+
+    def all_jump_moves(color)
+      moves = []
+      @grid.each do |row|
+        row.each do |piece|
+          moves += piece.jump_moves if piece && piece.color == color
+        end
+      end
+
+      moves
+    end
+
+    def calculate_mid_position(start_pos, end_pos)
+      # there must be a better way to do this, but...
+      new_row = start_pos[0] + ((start_pos[0] - end_pos[0] == 2) ? -1 : 1)
+      new_col = start_pos[1] + ((start_pos[1] - end_pos[1] == 2) ? -1 : 1)
+
+      [new_row, new_col]
     end
   end
 end

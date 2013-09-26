@@ -2,14 +2,19 @@ module Checkers
   class Piece
     attr_reader :color, :row, :col
 
-    def initialize(color, board, position)
+    def initialize(color, board, position, direction = nil)
       @color, @board = color, board
 
       @row = position[0]
       @col = position[1]
 
       # initial direction is based on starting position
-      @direction = ((@row < Board::GRID_SIZE / 2) ? :+ : :-)
+      if direction
+        @direction = direction
+      else
+        @direction = ((@row < Board::GRID_SIZE / 2) ? :+ : :-)
+      end
+
     end
 
     def available_moves
@@ -40,7 +45,7 @@ module Checkers
 
         row_n = neighbor.row.send(direction, 1)
         col_n = neighbor.col + offset
-        if board[row_n, col_n].nil?
+        if board.on_board?(row_n, col_n) && board[row_n, col_n].nil?
           moves << [row_n, col_n]
         end
       end
@@ -84,6 +89,10 @@ module Checkers
 
     def inspect
       to_s
+    end
+
+    def dup(new_board)
+      Piece.new(color, new_board, [row, col], direction)
     end
 
 

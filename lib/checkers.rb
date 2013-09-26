@@ -17,12 +17,12 @@ module Checkers
       until board.game_over?
         print_board(board)
         begin
-          move = get_move
+          move = get_move(players[current])
           start_pos = move.shift
 
-          board.move(start_pos, *move)
+          board.move(start_pos, *move, players[current])
         rescue InvalidMoveError => ex
-          puts ex
+          puts "Invalid move: #{ex.message}"
           next  # skip alternation of turn
         end
 
@@ -34,8 +34,8 @@ module Checkers
 
     private
 
-    def get_move
-      puts "Enter a move (e.g., f3 h5 [f7...]): "
+    def get_move(color)
+      puts "#{color.to_s.capitalize}: Enter a move (e.g., f3 h5 [f7...]): "
       input = gets.chomp.split(" ")
 
       input.map do |str|
