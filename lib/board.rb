@@ -1,9 +1,16 @@
 require_relative "./piece"
 require_relative "./errors"
+require_relative "./error_handler"
 
 module Checkers
   class Board
+    include ErrorHandler
+
     GRID_SIZE = 8 # extending to other sides requires some thinking
+
+    def self.on_board?(row, col)
+      (row >= 0 && row < GRID_SIZE) && (col >= 0 && col < GRID_SIZE)
+    end
 
     def initialize(grid = nil)
       @grid = (grid ? grid : init_grid)
@@ -12,31 +19,50 @@ module Checkers
     end
 
     def move(start_pos, *end_pos, color)
+      reset_errors
       piece = self[*start_pos]
 
       if piece.nil?
-        raise InvalidMoveError.new(start_pos, end_pos, "No piece.")
+        add_error("No piece at initial position")
       elsif piece.color != color
-        raise InvalidMoveError.new(start_pos, end_pos, "Not correct color.")
+        add_error("Incorrect piece at initial position")
       end
 
 
-      if valid_slide_move?(start_pos, *end_pos)
-        move!(start_pos, *end_pos)
-      elsif valid_jump_move?(start_pos, *(end_pos.dup))
-        move!(start_pos, *end_pos)
+      if slide_move?(start_pos, end_pos.first)
+        if valid_slide_move?(start_pos, end_pos.first)
+          move!(start_pos, *end_pos)
+        else
+          add_error("Invalid sliding move")
+        end
       else
-        raise InvalidMoveError.new(start_pos, end_pos, "Unable to make the move.")
+        if valid_jump_move?(start_pos, *(end_pos.dup))
+          move!(start_pos, *end_pos)
+        else
+          add_error("Invalid jumping move")
+        end
       end
+
+      return false if errors?
+    end
+
+    def perform_slide_move!(start_pos, end_pos)
+      piece = self[*start_pos]
+
+      unless slide_move?(start_pos, end_pos)
+        raise InvalidMoveError.new(start_pos, end_pos, "Not a slide move!")
+      end
+
+      self[*start_pos] = nil
+      self[*end_pos[0]] = piece
+      piece.set_position(*end_pos[0])
     end
 
     def move!(start_pos, *end_pos)
       piece = self[*start_pos]
 
       if slide_move?(start_pos, *end_pos)
-        self[*start_pos] = nil
-        self[*end_pos[0]] = piece
-        piece.set_position(*end_pos[0])
+
       else
         current_pos = start_pos
         end_pos.each do |pos|
@@ -69,10 +95,6 @@ module Checkers
       @grid[row][col] = value
 
       value
-    end
-
-    def on_board?(row, col)
-      (row >= 0 && row < GRID_SIZE) && (col >= 0 && col < GRID_SIZE)
     end
 
     def game_over?
@@ -180,17 +202,14 @@ module Checkers
       piece = self[*start_pos]
 
       # a slide move only moves a single square
-      (piece.row - end_pos[0][0]).abs == 1
+      end_pos.length == 1 && (piece.row - end_pos.first[0]).abs == 1
     end
 
-    # a slide move is valid only if there are no jump moves on the board
-    # and the particular slide is to an empty place
-    def valid_slide_move?(start_pos, *end_pos)
+    def valid_slide_move?(start_pos, end_pos)
       piece = self[*start_pos]
 
       all_jump_moves(piece.color).empty? &&
-      end_pos.length == 1 &&
-      piece.slide_moves.include?(end_pos[0])
+      piece.slide_moves.include?(end_pos)
     end
 
     def all_jump_moves(color)

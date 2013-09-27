@@ -27,7 +27,7 @@ module Checkers
         next_row = row.send(dir, 1)
 
         move_offsets(row, col).each do |offset|
-          if board.on_board?(next_row, col + offset) && board[next_row, col + offset].nil?
+          if Board.on_board?(next_row, col + offset) && board[next_row, col + offset].nil?
             moves << [next_row, col + offset]
           end
         end
@@ -42,14 +42,14 @@ module Checkers
       directions.each do |dir|
         move_offsets(row, col).each do |offset|
           next_row = row.send(dir, 1)
-          next unless board.on_board?(next_row, col + offset)
+          next unless Board.on_board?(next_row, col + offset)
 
           neighbor = board[next_row, col + offset]
           next if neighbor.nil? || neighbor.color == color
 
           row_n = neighbor.row.send(dir, 1)
           col_n = neighbor.col + offset
-          if board.on_board?(row_n, col_n) && board[row_n, col_n].nil?
+          if Board.on_board?(row_n, col_n) && board[row_n, col_n].nil?
             moves << [row_n, col_n]
           end
         end
@@ -92,7 +92,7 @@ module Checkers
       offsets = []
       directions.each do |dir|
         offsets += [-1, 1].select do |offset|
-          board.on_board?(row.send(dir, 1), col + offset)
+          Board.on_board?(row.send(dir, 1), col + offset)
         end
       end
 
